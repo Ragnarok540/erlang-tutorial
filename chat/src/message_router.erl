@@ -1,32 +1,28 @@
 -module(message_router).
-
 -define(SERVER, message_router).
-
 -compile(export_all).
 
 start() ->
-    global:trans({?SERVER, ?SERVER},
-                 fun() ->
-                     case global:whereis_name(?SERVER) of
-                         undefined ->
-                             Pid = spawn(message_router, route_messages, [dict:new()]),
-                             global:register_name(?SERVER, Pid);
-                         _ ->
-                             ok
-                     end
-                 end).
+    global:trans({?SERVER, ?SERVER}, fun() ->
+        case global:whereis_name(?SERVER) of
+            undefined ->
+                Pid = spawn(message_router, route_messages, [dict:new()]),
+                global:register_name(?SERVER, Pid);
+            _ ->
+                ok
+        end
+    end).
 
 stop() ->
-    global:trans({?SERVER, ?SERVER},
-                 fun() ->
-                     case global:whereis_name(?SERVER) of
-                         undefined ->
-                             ok;
-                         _ ->
-                             global:send(?SERVER, shutdown)
-                     end
-                 end).
-    
+    global:trans({?SERVER, ?SERVER}, fun() ->
+        case global:whereis_name(?SERVER) of
+            undefined ->
+                ok;
+            _ ->
+                global:send(?SERVER, shutdown)
+        end
+    end).
+
 send_chat_message(Addressee, MessageBody) ->
     global:send(?SERVER, {send_chat_msg, Addressee, MessageBody}).
     

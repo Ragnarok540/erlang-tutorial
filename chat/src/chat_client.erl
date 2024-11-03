@@ -1,5 +1,4 @@
 -module(chat_client).
-
 -compile(export_all).
 
 register_client(ClientName) ->
