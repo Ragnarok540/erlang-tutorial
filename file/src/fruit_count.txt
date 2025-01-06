@@ -1,0 +1,3 @@
+Mango 5
+Olive 10
+Watermelon 3
