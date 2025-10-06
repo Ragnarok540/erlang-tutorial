@@ -6,10 +6,14 @@ start() ->
     Accepter = spawn(?MODULE, accepter, [LSock]),
     Accepter.
 
+-spec session(State, Sock) -> ok when
+    State :: command | {challenge, list(binary())} | {post, list(binary())} | {get, unicode:chardata()},
+    Sock :: get_tcp:socket().
+
 session(command, Sock) ->
     case gen_tcp:recv(Sock, 0) of
         {ok, <<"POST\r\n">>} ->
-            session(post, Sock);
+            session({post, []}, Sock);
         {ok, <<"GET ", Id/binary>>} ->
             session({get, string:trim(Id)}, Sock);
         {ok, _} ->
@@ -21,12 +25,23 @@ session(command, Sock) ->
             gen_tcp:close(Sock),
             ok
     end;
-session(post, Sock) ->
-    io:format("POST MODE\n"),
+session({post, Lines}, Sock) ->
+    case gen_tcp:recv(Sock, 0) of
+        {ok, <<"SUBMIT\r\n">>} ->
+            session({challenge, Lines}, Sock);
+        {ok, Line} ->
+            session({post, [Line|Lines]}, Sock);
+        {error, Reason} ->
+            io:format("ERROR: session failed: ~w\n", [Reason]),
+            gen_tcp:close(Sock),
+            ok
+    end;
+session({get, Id}, Sock) ->
+    io:format("GET ~s\n", [Id]),
     gen_tcp:close(Sock),
     ok;
-session({get, Id}, Sock) ->
-    io:format("GET MODE ~s\n", [Id]),
+session({challenge, Lines}, Sock) ->
+    io:format("CHALLENGE ~w\n", [Lines]),
     gen_tcp:close(Sock),
     ok.
 
