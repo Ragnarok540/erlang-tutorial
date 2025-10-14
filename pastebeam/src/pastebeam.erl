@@ -11,6 +11,11 @@ fail_session(Sock, Reason) ->
     gen_tcp:close(Sock),
     ok.
 
+invalid_command(Sock) ->
+    gen_tcp:send(Sock, "INVALID COMMAND\r\n"),
+    gen_tcp:close(Sock),
+    ok.
+
 -spec session(State, Sock) -> ok when
     State :: command | 
              {challenge, list(binary())} |
@@ -26,9 +31,7 @@ session(command, Sock) ->
         {ok, <<"GET ", Id/binary>>} ->
             session({get, string:trim(Id)}, Sock);
         {ok, _} ->
-            gen_tcp:send(Sock, "INVALID COMMAND\r\n"),
-            gen_tcp:close(Sock),
-            ok;
+            invalid_command(Sock);
         {error, Reason} ->
             fail_session(Sock, Reason)
     end;
@@ -50,9 +53,7 @@ session({accepted, Lines, Challenge}, Sock) ->
         {ok, <<"ACCEPTED ", Id/binary>>} ->
             'TODO';
         {ok, _} ->
-            gen_tcp:send(Sock, "INVALID COMMAND\r\n"),
-            gen_tcp:close(Sock),
-            ok;
+            invalid_command(Sock);
         {error, Reason} ->
             fail_session(Sock, Reason)
     end;
