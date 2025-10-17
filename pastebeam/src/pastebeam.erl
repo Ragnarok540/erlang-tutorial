@@ -46,12 +46,22 @@ session({post, Lines}, Sock) ->
     end;
 session({challenge, Lines}, Sock) ->
     Challenge = binary:encode_hex(crypto:strong_rand_bytes(32)),
-    gen_tcp:send(Sock, [<<"CHALLENGE: ">>, Challenge, <<"\r\n">>]),
+    gen_tcp:send(Sock, [<<"CHALLENGE ">>, Challenge, <<"\r\n">>]),
     session({accepted, Lines, Challenge}, Sock);
 session({accepted, Lines, Challenge}, Sock) ->
     case gen_tcp:recv(Sock, 0) of
-        {ok, <<"ACCEPTED ", Id/binary>>} ->
-            'TODO';
+        {ok, <<"ACCEPTED ", Suffix/binary>>} ->
+            case binary:encode_hex(crypto:hash(sha256, [Lines, Challenge, <<"\r\n">>, Suffix])) of
+                <<"00000", _/binary>> ->
+                    Id = binary:encode_hex(crypto:strong_rand_bytes(32)),
+                    gen_tcp:send(Sock, [Id, <<"\r\n">>]),
+                    gen_tcp:close(Sock),
+                    ok;
+                _ ->
+                    gen_tcp:send(Sock, <<"CHALLENGE FAILED\r\n">>),
+                    gen_tcp:close(Sock),
+                    ok
+            end;
         {ok, _} ->
             invalid_command(Sock);
         {error, Reason} ->
